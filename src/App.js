@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 
 const countries = [
   { name: 'India', cities: ['Delhi', 'Mumbai', 'Bangalore', 'Chennai'] },
@@ -18,19 +18,22 @@ const countryCodes = [
 ];
 
 function App() {
-  const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    username: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-    phoneCountryCode: '+91',
-    phoneNumber: '',
-    country: '',
-    city: '',
-    panNumber: '',
-    aadharNumber: '',
+  const [formData, setFormData] = useState(() => {
+    const savedData = localStorage.getItem('formData');
+    return savedData ? JSON.parse(savedData) : {
+      firstName: '',
+      lastName: '',
+      username: '',
+      email: '',
+      password: '',
+      confirmPassword: '',
+      phoneCountryCode: '+91',
+      phoneNumber: '',
+      country: '',
+      city: '',
+      panNumber: '',
+      aadharNumber: '',
+    };
   });
 
   const [errors, setErrors] = useState({});
@@ -40,133 +43,107 @@ function App() {
   const [availableCities, setAvailableCities] = useState([]);
 
   useEffect(() => {
+    localStorage.setItem('formData', JSON.stringify(formData));
+  }, [formData]);
+
+  useEffect(() => {
     const selectedCountryData = countries.find(c => c.name === formData.country);
     setAvailableCities(selectedCountryData ? selectedCountryData.cities : []);
     if (formData.city && !selectedCountryData?.cities.includes(formData.city)) {
       setFormData(prev => ({ ...prev, city: '' }));
     }
-  }, [formData.country]);
+  }, [formData.country, formData.city]);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]: value,
-    });
-    if (errors[name]) {
-      setErrors({
-        ...errors,
-        [name]: null,
-      });
-    }
-  };
-
-  const validateForm = () => {
+  const validateAllFields = useCallback(() => {
     let newErrors = {};
-    let isValid = true;
 
     if (!formData.firstName.trim()) {
       newErrors.firstName = 'First Name is required.';
-      isValid = false;
     } else if (!/^[a-zA-Z\s]{2,50}$/.test(formData.firstName.trim())) {
       newErrors.firstName = 'First Name must be 2-50 characters long and contain only letters.';
-      isValid = false;
     }
 
     if (!formData.lastName.trim()) {
       newErrors.lastName = 'Last Name is required.';
-      isValid = false;
     } else if (!/^[a-zA-Z\s]{2,50}$/.test(formData.lastName.trim())) {
       newErrors.lastName = 'Last Name must be 2-50 characters long and contain only letters.';
-      isValid = false;
     }
 
     if (!formData.username.trim()) {
       newErrors.username = 'Username is required.';
-      isValid = false;
-    } else if (!/^[a-zA-Z0-9]{3,30}$/.test(formData.username.trim())) {
-      newErrors.username = 'Username must be 3-30 characters long and alphanumeric.';
-      isValid = false;
+    } else if (!/^[a-zA-Z0-9_-]{3,30}$/.test(formData.username.trim())) {
+      newErrors.username = 'Username must be 3-30 characters long and alphanumeric, with _ or -.';
     }
 
     if (!formData.email.trim()) {
       newErrors.email = 'Email is required.';
-      isValid = false;
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
       newErrors.email = 'Invalid email format.';
-      isValid = false;
     }
 
     if (!formData.password.trim()) {
       newErrors.password = 'Password is required.';
-      isValid = false;
     } else if (formData.password.length < 8) {
       newErrors.password = 'Password must be at least 8 characters long.';
-      isValid = false;
     } else if (!/(?=.*[a-z])/.test(formData.password)) {
       newErrors.password = 'Password must contain at least one lowercase letter.';
-      isValid = false;
     } else if (!/(?=.*[A-Z])/.test(formData.password)) {
       newErrors.password = 'Password must contain at least one uppercase letter.';
-      isValid = false;
     } else if (!/(?=.*\d)/.test(formData.password)) {
       newErrors.password = 'Password must contain at least one number.';
-      isValid = false;
     } else if (!/(?=.*[!@#$%^&*])/.test(formData.password)) {
       newErrors.password = 'Password must contain at least one special character (!@#$%^&*).';
-      isValid = false;
     }
 
     if (!formData.confirmPassword.trim()) {
       newErrors.confirmPassword = 'Confirm Password is required.';
-      isValid = false;
     } else if (formData.confirmPassword !== formData.password) {
       newErrors.confirmPassword = 'Passwords do not match.';
-      isValid = false;
     }
 
     if (!formData.phoneNumber.trim()) {
       newErrors.phoneNumber = 'Phone Number is required.';
-      isValid = false;
     } else if (!/^\d{7,15}$/.test(formData.phoneNumber.trim())) {
       newErrors.phoneNumber = 'Invalid phone number format (7-15 digits).';
-      isValid = false;
     }
 
     if (!formData.country) {
       newErrors.country = 'Country is required.';
-      isValid = false;
     }
 
     if (!formData.city) {
       newErrors.city = 'City is required.';
-      isValid = false;
     }
 
     if (!formData.panNumber.trim()) {
       newErrors.panNumber = 'PAN Number is required.';
-      isValid = false;
     } else if (!/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(formData.panNumber.trim().toUpperCase())) {
       newErrors.panNumber = 'Invalid PAN Number format (e.g., ABCDE1234F).';
-      isValid = false;
     }
 
     if (!formData.aadharNumber.trim()) {
       newErrors.aadharNumber = 'Aadhar Number is required.';
-      isValid = false;
     } else if (!/^\d{4}\s?\d{4}\s?\d{4}$/.test(formData.aadharNumber.trim())) {
       newErrors.aadharNumber = 'Invalid Aadhar Number format (12 digits, e.g., 1234 5678 9012).';
-      isValid = false;
     }
 
     setErrors(newErrors);
-    return isValid;
+    return Object.keys(newErrors).length === 0;
+  }, [formData]);
+
+  useEffect(() => {
+    validateAllFields();
+  }, [formData, validateAllFields]);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const isValid = validateForm();
+    const isValid = validateAllFields();
     if (isValid) {
       setIsSubmitted(true);
       console.log('Form Submitted Successfully:', formData);
@@ -175,16 +152,13 @@ function App() {
     }
   };
 
-  const isFormValidForSubmission = () => {
-    const allFieldsFilled = Object.values(formData).every(value => {
-      if (typeof value === 'string') return value.trim() !== '';
-      return true;
-    });
+  const allFieldsFilled = Object.values(formData).every(value => {
+    if (typeof value === 'string') return value.trim() !== '';
+    return true;
+  });
 
-    const noErrors = Object.values(errors).every(error => !error);
-
-    return allFieldsFilled && noErrors && Object.keys(errors).length === 0;
-  };
+  const hasErrors = Object.keys(errors).length > 0;
+  const canSubmit = allFieldsFilled && !hasErrors;
 
   if (isSubmitted) {
     return (
@@ -237,7 +211,7 @@ function App() {
                 name="firstName"
                 value={formData.firstName}
                 onChange={handleChange}
-                onBlur={validateForm}
+                onBlur={validateAllFields}
                 className={`w-full p-3 border ${errors.firstName ? 'border-red-500 focus:ring-red-500' : 'border-gray-300'} rounded-lg shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent`}
                 placeholder="Enter your first name"
               />
@@ -251,7 +225,7 @@ function App() {
                 name="lastName"
                 value={formData.lastName}
                 onChange={handleChange}
-                onBlur={validateForm}
+                onBlur={validateAllFields}
                 className={`w-full p-3 border ${errors.lastName ? 'border-red-500 focus:ring-red-500' : 'border-gray-300'} rounded-lg shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent`}
                 placeholder="Enter your last name"
               />
@@ -263,7 +237,7 @@ function App() {
             <div>
               <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1">
                 Username
-                <span className="text-gray-500 text-xs ml-2">(3-30 alphanumeric characters)</span>
+                <span className="text-gray-500 text-xs ml-2">(3-30 alphanumeric characters, with _ or -)</span>
               </label>
               <input
                 type="text"
@@ -271,7 +245,7 @@ function App() {
                 name="username"
                 value={formData.username}
                 onChange={handleChange}
-                onBlur={validateForm}
+                onBlur={validateAllFields}
                 className={`w-full p-3 border ${errors.username ? 'border-red-500 focus:ring-red-500' : 'border-gray-300'} rounded-lg shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent`}
                 placeholder="Choose a username"
               />
@@ -288,7 +262,7 @@ function App() {
                 name="email"
                 value={formData.email}
                 onChange={handleChange}
-                onBlur={validateForm}
+                onBlur={validateAllFields}
                 className={`w-full p-3 border ${errors.email ? 'border-red-500 focus:ring-red-500' : 'border-gray-300'} rounded-lg shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent`}
                 placeholder="Enter your email address"
               />
@@ -308,7 +282,7 @@ function App() {
                 name="password"
                 value={formData.password}
                 onChange={handleChange}
-                onBlur={validateForm}
+                onBlur={validateAllFields}
                 className={`w-full p-3 border ${errors.password ? 'border-red-500 focus:ring-red-500' : 'border-gray-300'} rounded-lg shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent pr-10`}
                 placeholder="Create a strong password"
               />
@@ -344,7 +318,7 @@ function App() {
                 name="confirmPassword"
                 value={formData.confirmPassword}
                 onChange={handleChange}
-                onBlur={validateForm}
+                onBlur={validateAllFields}
                 className={`w-full p-3 border ${errors.confirmPassword ? 'border-red-500 focus:ring-red-500' : 'border-gray-300'} rounded-lg shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent pr-10`}
                 placeholder="Re-enter your password"
               />
@@ -376,6 +350,7 @@ function App() {
                 name="phoneCountryCode"
                 value={formData.phoneCountryCode}
                 onChange={handleChange}
+                onBlur={validateAllFields}
                 className="p-3 border border-gray-300 rounded-l-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all duration-200"
               >
                 {countryCodes.map((cc) => (
@@ -390,7 +365,7 @@ function App() {
                 name="phoneNumber"
                 value={formData.phoneNumber}
                 onChange={handleChange}
-                onBlur={validateForm}
+                onBlur={validateAllFields}
                 className={`flex-1 p-3 border ${errors.phoneNumber ? 'border-red-500 focus:ring-red-500' : 'border-gray-300'} rounded-r-lg shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent`}
                 placeholder="e.g., 9876543210"
               />
@@ -406,7 +381,7 @@ function App() {
                 name="country"
                 value={formData.country}
                 onChange={handleChange}
-                onBlur={validateForm}
+                onBlur={validateAllFields}
                 className={`w-full p-3 border ${errors.country ? 'border-red-500 focus:ring-red-500' : 'border-gray-300'} rounded-lg shadow-sm transition-all duration-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent`}
               >
                 <option value="">Select a country</option>
@@ -425,7 +400,7 @@ function App() {
                 name="city"
                 value={formData.city}
                 onChange={handleChange}
-                onBlur={validateForm}
+                onBlur={validateAllFields}
                 disabled={!formData.country}
                 className={`w-full p-3 border ${errors.city ? 'border-red-500 focus:ring-red-500' : 'border-gray-300'} rounded-lg shadow-sm transition-all duration-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent ${!formData.country ? 'opacity-60 cursor-not-allowed' : ''}`}
               >
@@ -443,45 +418,42 @@ function App() {
           <div>
             <label htmlFor="panNumber" className="block text-sm font-medium text-gray-700 mb-1">PAN Number</label>
             <input
-                type="text"
-                id="panNumber"
-                name="panNumber"
-                value={formData.panNumber}
-                onChange={handleChange}
-                onBlur={validateForm}
-                className={`w-full p-3 border ${errors.panNumber ? 'border-red-500 focus:ring-red-500' : 'border-gray-300'} rounded-lg shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent`}
-                placeholder="e.g., ABCDE1234F"
-                maxLength="10"
-              />
+              type="text"
+              id="panNumber"
+              name="panNumber"
+              value={formData.panNumber}
+              onChange={handleChange}
+              onBlur={validateAllFields}
+              className={`w-full p-3 border ${errors.panNumber ? 'border-red-500 focus:ring-red-500' : 'border-gray-300'} rounded-lg shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent`}
+              placeholder="e.g., ABCDE1234F"
+              maxLength="10"
+            />
             {errors.panNumber && <p className="mt-1 text-sm text-red-600">{errors.panNumber}</p>}
           </div>
           <div>
             <label htmlFor="aadharNumber" className="block text-sm font-medium text-gray-700 mb-1">Aadhar Number</label>
             <input
-                type="text"
-                id="aadharNumber"
-                name="aadharNumber"
-                value={formData.aadharNumber}
-                onChange={(e) => {
-                  const formattedValue = e.target.value.replace(/\D/g, '').replace(/(\d{4})(?=\d)/g, '$1 ').substring(0, 14);
-                  setFormData(prev => ({ ...prev, aadharNumber: formattedValue }));
-                  if (errors.aadharNumber) {
-                    setErrors(prev => ({ ...prev, aadharNumber: null }));
-                  }
-                }}
-                onBlur={validateForm}
-                className={`w-full p-3 border ${errors.aadharNumber ? 'border-red-500 focus:ring-red-500' : 'border-gray-300'} rounded-lg shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent`}
-                placeholder="e.g., 1234 5678 9012"
-                maxLength="14"
-              />
+              type="text"
+              id="aadharNumber"
+              name="aadharNumber"
+              value={formData.aadharNumber}
+              onChange={(e) => {
+                const formattedValue = e.target.value.replace(/\D/g, '').replace(/(\d{4})(?=\d)/g, '$1 ').substring(0, 14);
+                setFormData(prev => ({ ...prev, aadharNumber: formattedValue }));
+              }}
+              onBlur={validateAllFields}
+              className={`w-full p-3 border ${errors.aadharNumber ? 'border-red-500 focus:ring-red-500' : 'border-gray-300'} rounded-lg shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent`}
+              placeholder="e.g., 1234 5678 9012"
+              maxLength="14"
+            />
             {errors.aadharNumber && <p className="mt-1 text-sm text-red-600">{errors.aadharNumber}</p>}
           </div>
 
           <button
             type="submit"
-            disabled={!isFormValidForSubmission()}
+            disabled={!canSubmit}
             className={`w-full py-3 px-6 rounded-lg text-white font-bold transition-all duration-300 shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transform ${
-              isFormValidForSubmission()
+              canSubmit
                 ? 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 active:scale-95'
                 : 'bg-gray-400 cursor-not-allowed'
             }`}
