@@ -23,7 +23,7 @@ To run this project on your local machine, follow these steps:
 
 Clone the repository:
 
-git clone [your-repo-url]
+git clone https://github.com/priyam-343/to_do_list.git
 
 Navigate to the project directory:
 
